@@ -1,6 +1,8 @@
+import os
+
 from nicegui import ui
 
-from pages import housing_application  
+from pages import housing_application, become_an_ra
 
 from components.header import render_site_header
 
@@ -41,11 +43,6 @@ def meal_plans_page():
     render_placeholder_page("Meal Plans")
 
 
-@ui.page("/become-an-ra")
-def become_an_ra_page():
-    render_placeholder_page("Become an RA")
-
-
 @ui.page("/my-profile")
 def my_profile_page():
     render_placeholder_page("My Profile")
@@ -57,4 +54,5 @@ def messages_page():
 
 
 
-ui.run(port=8085, title="Mock Housing Portal")
+ui.run(host=os.getenv("HOUSING_UI_HOST", "127.0.0.1"), port=8085, title="Mock Housing Portal", reload=False, show=False,
+       storage_secret=os.getenv("STORAGE_SECRET", "local-housing-prototype-only"))

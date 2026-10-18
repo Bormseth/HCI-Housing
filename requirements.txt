@@ -2,3 +2,5 @@ fastapi
 uvicorn
 nicegui
 requests
+httpx
+tzdata

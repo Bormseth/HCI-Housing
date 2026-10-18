@@ -12,8 +12,10 @@ Endpoints:
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from services.ra_api import router as ra_router
 
 app = FastAPI(title="Mock Housing API")
+app.include_router(ra_router)
 
 app.add_middleware(
     CORSMiddleware,

@@ -22,7 +22,7 @@ NAV_RIGHT_LINKS = [
 ]
 
 
-def render_site_header():
+def render_site_header(active_path: str = "", compact: bool = False):
     """Render the shared portal header and navigation."""
     ui.add_head_html("""
         <style>
@@ -34,6 +34,12 @@ def render_site_header():
                         background: white; border-radius: 14px; }
             .site-nav a { padding: 10px 12px; color: #34495e; font-weight: 600;
                           white-space: nowrap; }
+            .site-nav a[aria-current="page"] { background: #eaf0fa; color: #073b78;
+                          border-radius: 7px; text-decoration: none; }
+            .site-shell.ra-site-header { padding-top: 14px; padding-bottom: 0; gap: 0; }
+            .ra-site-header .brand-row { min-height: 72px; }
+            .ra-site-header .brand-logo { width: 280px; }
+            .ra-site-header .site-nav { margin: 12px 0 0; border: 1px solid #e0e7ef; }
             .home-content { max-width: 920px; margin: 58px auto 0; }
             .welcome-card { padding: 40px; border-radius: 24px; }
             .welcome-title { margin-top: 14px; color: #17324d;
@@ -47,10 +53,10 @@ def render_site_header():
         </style>
     """)
 
-    with ui.column().classes("site-shell w-full"):
+    with ui.column().classes("site-shell w-full" + (" ra-site-header" if compact else "")):
         with ui.row().classes("brand-row w-full items-center"):
             if _LOGO_PATH.exists():
-                ui.image("/unh-crest.png").classes("brand-logo")
+                ui.image("/unh-crest.png").classes("brand-logo").props('alt="University of New Hampshire"')
             else:
                 ui.label("UNH Housing Portal").classes("text-2xl font-bold")
 
@@ -59,8 +65,12 @@ def render_site_header():
         ):
             with ui.row().classes("items-center no-wrap"):
                 for label, target in NAV_LEFT_LINKS:
-                    ui.link(label, target)
+                    link = ui.link(label, target)
+                    if target == active_path:
+                        link.props('aria-current="page"')
 
             with ui.row().classes("items-center no-wrap"):
                 for label, target in NAV_RIGHT_LINKS:
-                    ui.link(label, target)
+                    link = ui.link(label, target)
+                    if target == active_path:
+                        link.props('aria-current="page"')
