@@ -2,7 +2,7 @@ import os
 
 from nicegui import ui
 
-from pages import housing_application, become_an_ra
+from pages import housing_application, meal_plan, become_an_ra
 
 from components.header import render_site_header
 
@@ -38,6 +38,10 @@ def render_placeholder_page(title: str):
             ).classes("welcome-copy")
 
 
+@ui.page("/become-an-ra")
+def become_an_ra_page():
+    render_placeholder_page("Become an RA")
+    
 @ui.page("/meal-plans")
 def meal_plans_page():
     render_placeholder_page("Meal Plans")
