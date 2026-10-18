@@ -19,11 +19,25 @@ def render_housing_card(room_type: dict, on_select):
         )
 
 
-def render_current_housing_card(housing: dict, on_cancel):
+def render_current_housing_card(housing: dict):
     """Render the user's current housing selection with a Cancel action."""
     with ui.card().classes("w-full"):
         ui.label(
-            f'{housing["building_name"]} - {housing["name"]}'
-        ).classes("font-bold")
-        ui.label(f'${housing["price_per_term"]}/term')
-        ui.button("Cancel", on_click=on_cancel).props("color=negative outline")
+            f'{housing["building_name"]} - {housing["style"].capitalize()} {format_room_type(housing["room_type"])}'
+            ).classes("font-bold")
+        with ui.link(target="/housing-applications/room-select"): ui.button("Change")
+
+def format_room_type(slug: str) -> str:
+    """'super_single' -> 'Super Single', '2_doubles_1_single' -> '2 Doubles + 1 Single'"""
+    parts = slug.split("_")
+    if not parts[0].isdigit():
+        return " ".join(parts).title()
+    return " + ".join(f"{parts[i]} {parts[i + 1].title()}" for i in range(0, len(parts), 2))
+
+def render_building_card(building):
+    with ui.card():
+        with ui.row():
+            ui.label(text=building["name"])
+        with ui.row():
+            with ui.link(target=building["url"], new_tab=True): ui.button("More Info")
+            with ui.link(target=f"/housing-applications/room-select/{building['id']}"): ui.button("Choose Room")

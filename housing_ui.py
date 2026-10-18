@@ -1,6 +1,6 @@
 from nicegui import ui
 
-from pages import housing_application  
+from pages import housing_application, housing_selection
 
 from components.header import render_site_header
 

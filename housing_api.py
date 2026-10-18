@@ -12,11 +12,11 @@ Run with:
 API is available at http://localhost:8006
 
 Endpoints:
-    GET  /buildings
-    GET  /room-types
-    GET  /room-types/{room_type_id}
-    GET  /my-housing
-    POST /housing/select   body: {"room_type_id": int}
+    GET  /housing-options                 all buildings (with their room types)
+    GET  /housing-options/{building_id}   one building
+    GET  /my-housing                      current selection, or null
+    POST /housing/select   body: {"building_id": int, "style": str, "room_type": str}
+    POST /housing/confirm
     POST /housing/cancel
     GET  /announcements
 """
@@ -24,6 +24,7 @@ Endpoints:
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from data.unh_housing_data import HOUSING
 
 app = FastAPI(title="Mock Housing API")
 
@@ -38,25 +39,6 @@ app.add_middleware(
 # In-memory "database"
 # ---------------------------------------------------------------------
 
-BUILDINGS = [
-    {"id": 1, "name": "Harborview Hall", "class_years": "First-year", "amenities": "dining hall, laundry, study lounge"},
-    {"id": 2, "name": "Elm Residence", "class_years": "Sophomore+", "amenities": "kitchenette, laundry"},
-    {"id": 3, "name": "Ridgeline Suites", "class_years": "Junior/Senior", "amenities": "kitchen, private bath, laundry"},
-]
-
-ROOM_TYPES = [
-    {"id": 1, "building_id": 1, "name": "Double", "price_per_term": 3200, "capacity": 2, "total_spaces": 120},
-    {"id": 2, "building_id": 1, "name": "Triple", "price_per_term": 2800, "capacity": 3, "total_spaces": 45},
-    {"id": 3, "building_id": 2, "name": "Single", "price_per_term": 4100, "capacity": 1, "total_spaces": 40},
-    {"id": 4, "building_id": 2, "name": "Double", "price_per_term": 3400, "capacity": 2, "total_spaces": 80},
-    {"id": 5, "building_id": 3, "name": "4-Person Suite", "price_per_term": 3900, "capacity": 4, "total_spaces": 32},
-]
-
-SELECTIONS = [
-    {"id": 1, "room_type_id": 1, "student": "Dolly Parton"},
-    {"id": 2, "room_type_id": 1, "student": "Elvis Presley"},
-    {"id": 3, "room_type_id": 3, "student": "Johnny Cash"},
-]
 _next_selection_id = 4
 
 ANNOUNCEMENTS = [
@@ -79,57 +61,31 @@ ANNOUNCEMENTS = [
 # ---------------------------------------------------------------------
 
 class SelectRequest(BaseModel):
-    room_type_id: int
+    building_id: int
+    style: str
+    room_type: str
+
+# The student's current selection (None until they pick something).
+_selection: dict | None = None
 
 def _get_building_or_404(building_id: int) -> dict:
-    for b in BUILDINGS:
+    for b in HOUSING:
         if b["id"] == building_id:
             return b
     raise HTTPException(status_code=404, detail="Building not found")
 
-def _get_room_type_or_404(room_type_id: int) -> dict:
-    for rt in ROOM_TYPES:
-        if rt["id"] == room_type_id:
-            return rt
-    raise HTTPException(status_code=404, detail="Room type not found")
 
-def _taken_count(room_type_id: int) -> int:
-    return sum(1 for s in SELECTIONS if s["room_type_id"] == room_type_id)
-
-def _my_selection():
-    for s in SELECTIONS:
-        if s["student"] == "you":
-            return s
-    return None
-
-def _summarize_room_type(rt: dict) -> dict:
-    taken = _taken_count(rt["id"])
-    building = _get_building_or_404(rt["building_id"])
-    summary = dict(rt)
-    summary["building_name"] = building["name"]
-    summary["taken"] = taken
-    summary["spaces_open"] = rt["total_spaces"] - taken
-    return summary
-
-@app.get("/buildings")
+@app.get("/housing-options")
 def list_buildings():
-    return BUILDINGS
+    return HOUSING
 
-@app.get("/room-types")
-def list_room_types():
-    return [_summarize_room_type(rt) for rt in ROOM_TYPES]
-
-@app.get("/room-types/{room_type_id}")
-def get_room_type(room_type_id: int):
-    return _summarize_room_type(_get_room_type_or_404(room_type_id))
+@app.get("/housing-options/{building_id}")
+def get_building(building_id: int):
+    return _get_building_or_404(building_id)
 
 @app.get("/my-housing")
 def get_my_housing():
-    selection = _my_selection()
-    if not selection:
-        return None
-    rt = _get_room_type_or_404(selection["room_type_id"])
-    return {**selection, **_summarize_room_type(rt)}
+    return _selection
 
 @app.get("/announcements")
 def list_announcements():
@@ -137,28 +93,40 @@ def list_announcements():
 
 @app.post("/housing/select")
 def select_housing(req: SelectRequest):
-    global _next_selection_id
-    room_type = _get_room_type_or_404(req.room_type_id)
-    if _my_selection():
-        raise HTTPException(
-            status_code=400,
-            detail="You already have a housing selection. Cancel it before choosing a new one.",
-        )
-    if _taken_count(room_type["id"]) >= room_type["total_spaces"]:
-        raise HTTPException(status_code=400, detail=f'{room_type["name"]} is full')
+    global _selection
+    building = _get_building_or_404(req.building_id)
+    room = next(
+        (r for r in building["rooms"]
+         if r["style"] == req.style and r["room_type"] == req.room_type),
+        None,
+    )
+    if room is None:
+        raise HTTPException(status_code=404, detail="Room type not found in this building")
+    # Selecting again simply replaces the previous selection.
+    _selection = {
+        "building_id": building["id"],
+        "building_name": building["name"],
+        "style": room["style"],
+        "room_type": room["room_type"],
+        "capacity": room["capacity"],
+        "confirmed": False,
+    }
+    return _selection
 
-    new_selection = {"id": _next_selection_id, "room_type_id": room_type["id"], "student": "you"}
-    SELECTIONS.append(new_selection)
-    _next_selection_id += 1
-    return new_selection
+@app.post("/housing/confirm")
+def confirm_housing():
+    if _selection is None:
+        raise HTTPException(status_code=400, detail="No housing selection to confirm")
+    _selection["confirmed"] = True
+    return _selection
 
 @app.post("/housing/cancel")
 def cancel_housing():
-    selection = _my_selection()
-    if not selection:
-        raise HTTPException(status_code=404, detail="You don't have a housing selection to cancel")
-    SELECTIONS.remove(selection)
-    return {"cancelled": selection["id"]}
+    global _selection
+    if _selection is None:
+        raise HTTPException(status_code=400, detail="No housing selection to cancel")
+    _selection = None
+    return {"cancelled": True}
 
 if __name__ == "__main__":
     import uvicorn

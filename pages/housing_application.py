@@ -10,16 +10,16 @@ from components.my_housing import render_no_housing_message
 from services.api_client import api_get, api_post
 
 
-def select_room_type(room_type_id: int):
-    if api_post("/housing/select", {"room_type_id": room_type_id}):
-        ui.notify("Housing selected", type="positive")
-        render_content.refresh()
+# def select_room_type(room_type_id: int):
+#     if api_post("/housing/select", {"room_type_id": room_type_id}):
+#         ui.notify("Housing selected", type="positive")
+#         render_content.refresh()
 
 
-def cancel_housing():
-    if api_post("/housing/cancel"):
-        ui.notify("Housing selection cancelled", type="warning")
-        render_content.refresh()
+# def cancel_housing():
+#     if api_post("/housing/cancel"):
+#         ui.notify("Housing selection cancelled", type="warning")
+#         render_content.refresh()
 
 
 @ui.page("/housing-applications")
@@ -34,24 +34,24 @@ def render_content():
     ui.label("Housing Applications").classes("text-2xl")
 
     with ui.row().classes("w-full no-wrap items-start"):
-        with ui.column().classes("w-1/2 p-2"):
-            render_room_types()
+        # with ui.column().classes("w-1/2 p-2"):
+        #     render_room_types()
 
         with ui.column().classes("w-1/2 p-2"):
             render_my_housing()
             render_announcements()
 
 
-def render_room_types():
-    ui.label("Room Types").classes("text-lg font-bold")
-    room_types = api_get("/room-types")
+# def render_room_types():
+#     ui.label("Room Types").classes("text-lg font-bold")
+#     room_types = api_get("/room-types")
 
-    if not room_types:
-        ui.label("No room types are currently available.")
-        return
+#     if not room_types:
+#         ui.label("No room types are currently available.")
+#         return
 
-    for room_type in room_types:
-        render_housing_card(room_type, select_room_type)
+#     for room_type in room_types:
+#         render_housing_card(room_type, select_room_type)
 
 
 def render_my_housing():
@@ -62,7 +62,7 @@ def render_my_housing():
         render_no_housing_message()
         return
 
-    render_current_housing_card(my_housing, cancel_housing)
+    render_current_housing_card(my_housing)
 
 
 def render_announcements():
