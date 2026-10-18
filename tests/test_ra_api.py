@@ -64,6 +64,22 @@ class RAApplicationTests(unittest.TestCase):
         self.assertIn("email", response.json()["detail"]["errors"])
         self.assertEqual(self.load()["status"], "draft")
 
+    def test_step_validation_preserves_the_previous_saved_draft(self):
+        self.save({"full_name": "Saved name"})
+        response = self.client.put("/ra/application", headers=self.headers, json={
+            "data": {"full_name": "Unsaved edit"}, "step": 2,
+            "expected_version": 1, "validate_step": 1,
+        })
+        self.assertEqual(response.status_code, 422)
+        self.assertIn("email", response.json()["detail"]["errors"])
+        self.assertEqual(self.load()["data"]["full_name"], "Saved name")
+        self.assertEqual(self.load()["version"], 1)
+        response = self.client.put("/ra/application", headers=self.headers, json={
+            "data": self.valid_data(), "step": 2,
+            "expected_version": 1, "validate_step": 1,
+        })
+        self.assertEqual(response.status_code, 200)
+
     def test_stale_tab_cannot_overwrite_a_newer_draft(self):
         self.save({"full_name": "Newest answer"})
         response = self.save({"full_name": "Stale answer"}, version=0)

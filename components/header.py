@@ -22,7 +22,7 @@ NAV_RIGHT_LINKS = [
 ]
 
 
-def render_site_header(active_path: str = "", compact: bool = False):
+def render_site_header(active_path: str = ""):
     """Render the shared portal header and navigation."""
     ui.add_head_html("""
         <style>
@@ -36,10 +36,18 @@ def render_site_header(active_path: str = "", compact: bool = False):
                           white-space: nowrap; }
             .site-nav a[aria-current="page"] { background: #eaf0fa; color: #073b78;
                           border-radius: 7px; text-decoration: none; }
-            .site-shell.ra-site-header { padding-top: 14px; padding-bottom: 0; gap: 0; }
-            .ra-site-header .brand-row { min-height: 72px; }
-            .ra-site-header .brand-logo { width: 280px; }
-            .ra-site-header .site-nav { margin: 12px 0 0; border: 1px solid #e0e7ef; }
+            .application-banner { width: 100%; padding: 12px 16px; border-radius: 8px;
+                                  background: #eaf0fa; color: #17324d; gap: 10px; }
+            .application-grid { width: 100%; display: grid;
+                                grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+            .application-content { width: 100%; max-width: 1180px; margin: auto;
+                                   padding: 22px 28px; gap: 24px; }
+            .application-form { max-width: 920px; }
+            .application-errors { width: 100%; padding: 12px 16px; border-radius: 8px;
+                                  background: #fff3f0; color: #922b1c; border: 1px solid #edc1b7; }
+            .application-answer { white-space: pre-wrap; overflow-wrap: anywhere; }
+            .application-content a:focus-visible, .application-content button:focus-visible,
+            .site-nav a:focus-visible { outline: 3px solid #da8e00; outline-offset: 3px; }
             .home-content { max-width: 920px; margin: 58px auto 0; }
             .welcome-card { padding: 40px; border-radius: 24px; }
             .welcome-title { margin-top: 14px; color: #17324d;
@@ -48,12 +56,26 @@ def render_site_header(active_path: str = "", compact: bool = False):
                             line-height: 1.7; }
             .welcome-list { color: #536579; font-size: 16px; line-height: 1.7; }
             @media (max-width: 760px) {
-                .site-nav { overflow-x: auto; flex-wrap: nowrap; }
+                .application-grid { grid-template-columns: minmax(0, 1fr); }
+                .application-content { padding: 16px; gap: 18px; }
+                .application-stepper .q-stepper__header { flex-wrap: nowrap; }
+                .application-stepper .q-stepper__tab { padding: 12px 6px; min-width: 0; flex: 1; }
+                .application-stepper .q-stepper__label { min-width: 0; }
+                .application-stepper .q-stepper__title { font-size: 12px; white-space: normal; }
+                .application-stepper .q-stepper__step-inner { padding: 20px 16px; }
+                .site-shell { padding: 16px; }
+                .brand-row { min-height: 100px; }
+                .site-nav { flex-wrap: wrap; padding: 6px; gap: 4px; }
+                .site-nav > .row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: 100%; gap: 0; }
+                .site-nav > .row:last-child { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+                .site-nav a { padding: 8px 4px; min-height: 44px; white-space: normal;
+                              text-align: center; display: flex; align-items: center;
+                              justify-content: center; font-size: 12px; line-height: 1.35; }
             }
         </style>
     """)
 
-    with ui.column().classes("site-shell w-full" + (" ra-site-header" if compact else "")):
+    with ui.column().classes("site-shell w-full"):
         with ui.row().classes("brand-row w-full items-center"):
             if _LOGO_PATH.exists():
                 ui.image("/unh-crest.png").classes("brand-logo").props('alt="University of New Hampshire"')
