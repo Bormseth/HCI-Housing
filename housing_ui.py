@@ -1,6 +1,6 @@
 from nicegui import ui
 
-from pages import housing_application  
+from pages import housing_application, meal_plan
 
 from components.header import render_site_header
 
@@ -34,11 +34,6 @@ def render_placeholder_page(title: str):
             ui.label(
                 "This section is not available in the current portal prototype."
             ).classes("welcome-copy")
-
-
-@ui.page("/meal-plans")
-def meal_plans_page():
-    render_placeholder_page("Meal Plans")
 
 
 @ui.page("/become-an-ra")
