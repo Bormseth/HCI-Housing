@@ -1,16 +1,4 @@
 """
-housing_api.py
-
-A  mock backend for a campus housing portal: browse residence
-halls and room types with live availability, select/cancel a housing
-assignment, and read housing announcements.
-
-Run with:
-    pip install fastapi uvicorn
-    python housing_api.py
-
-API is available at http://localhost:8006
-
 Endpoints:
     GET  /buildings
     GET  /room-types
