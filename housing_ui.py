@@ -37,16 +37,6 @@ def render_placeholder_page(title: str):
                 "This section is not available in the current portal prototype."
             ).classes("welcome-copy")
 
-
-@ui.page("/become-an-ra")
-def become_an_ra_page():
-    render_placeholder_page("Become an RA")
-    
-@ui.page("/meal-plans")
-def meal_plans_page():
-    render_placeholder_page("Meal Plans")
-
-
 @ui.page("/my-profile")
 def my_profile_page():
     render_placeholder_page("My Profile")
