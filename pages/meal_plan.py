@@ -1,7 +1,13 @@
+from datetime import datetime
+from uuid import uuid4
+from zoneinfo import ZoneInfo
 
-from nicegui import ui
+from nicegui import app, ui
 
 from components.header import render_site_header
+from services.api_client import APIError, api_request
+
+YEAR_SLUG = "2026-2027"
 
 
 # Sample prototype data. Replace with official UNH meal plan details.
@@ -166,7 +172,7 @@ def meal_plans_page():
                         ).classes("mt-4")
 
 @ui.page("/meal-plans/2026-2027")
-def meal_plan_application_2026():
+async def meal_plan_application_2026():
     render_site_header()
 
     application = {
@@ -174,6 +180,22 @@ def meal_plan_application_2026():
         "meal_plan": None,
         "dining_dollars": DINING_DOLLAR_OPTIONS[0],
     }
+
+    # Load any previously confirmed selection so the student can see and change it.
+    existing = None
+    try:
+        existing = await meal_request("GET")
+    except APIError as error:
+        ui.notify(str(error), type="negative", close_button=True)
+    if existing:
+        application["terms_accepted"] = True
+        application["meal_plan"] = next(
+            (p for p in MEAL_PLANS if p["name"] == existing["meal_plan"]), None
+        )
+        application["dining_dollars"] = next(
+            (o for o in DINING_DOLLAR_OPTIONS if o["amount"] == existing["dining_dollars"]),
+            DINING_DOLLAR_OPTIONS[0],
+        )
 
     with ui.column().classes(
         "site-shell w-full max-w-6xl mx-auto p-6 gap-6"
@@ -193,6 +215,9 @@ def meal_plan_application_2026():
             "Review the dining information, select your meal plan, "
             "choose any additional Dining Dollars, and review your choices."
         ).classes("text-gray-600")
+
+        if existing:
+            existing_selection_banner(existing)
 
         with ui.stepper().props("contractable=false").classes("w-full") as stepper:
 
@@ -222,7 +247,8 @@ def meal_plan_application_2026():
                 ).classes("text-gray-600")
 
                 terms_checkbox = ui.checkbox(
-                    "I have read and agree to the meal plan terms."
+                    "I have read and agree to the meal plan terms.",
+                    value=application["terms_accepted"],
                 )
 
                 ui.button(
@@ -238,7 +264,10 @@ def meal_plan_application_2026():
                 )
 
                 plan_status = ui.label(
-                    "No meal plan selected."
+                    f"Selected: {application['meal_plan']['name']} — "
+                    f"${application['meal_plan']['price']:,.2f}"
+                    if application["meal_plan"]
+                    else "No meal plan selected."
                 ).classes("text-gray-600")
 
                 with ui.grid(columns=2).classes("w-full gap-4"):
@@ -288,7 +317,7 @@ def meal_plan_application_2026():
                 ).classes("text-gray-600")
 
                 dollars_status = ui.label(
-                    "Selected amount: $0.00"
+                    f"Selected amount: ${application['dining_dollars']['amount']:,.2f}"
                 ).classes("text-gray-600")
 
                 with ui.grid(columns=2).classes("w-full gap-4"):
@@ -337,10 +366,15 @@ def meal_plan_application_2026():
                         on_click=stepper.previous,
                     ).props("flat")
 
-                    ui.button(
+                    confirm_button = ui.button(
                         "Confirm Selection",
-                        on_click=lambda: confirm_meal_plan(application),
+                        on_click=lambda: confirm_meal_plan(
+                            application, confirm_button, stepper, confirmation_content
+                        ),
                     )
+
+            with ui.step("Confirmation"):
+                confirmation_content = ui.column().classes("w-full")
 
 
 def continue_from_intro(stepper, application, accepted):
@@ -475,7 +509,82 @@ def show_summary(stepper, application, summary_content):
     stepper.next()
 
 
-def confirm_meal_plan(application):
+async def meal_request(method, data=None):
+    # Same per-browser session id the RA application uses.
+    session = app.storage.user.get("ra_session")
+    if not session:
+        session = str(uuid4())
+        app.storage.user["ra_session"] = session
+    return await api_request(
+        method, f"/meal-plans/{YEAR_SLUG}/selection", data, session=session
+    )
+
+
+def format_time(value):
+    return (
+        datetime.fromisoformat(value)
+        .astimezone(ZoneInfo("America/New_York"))
+        .strftime("%b %d, %Y at %I:%M %p ET")
+    )
+
+
+def existing_selection_banner(existing):
+    async def cancel():
+        try:
+            await meal_request("DELETE")
+            ui.navigate.reload()
+        except APIError as error:
+            ui.notify(str(error), type="negative", close_button=True)
+
+    with ui.card().classes("w-full p-4 rounded-xl shadow-sm"):
+        ui.label(
+            f"You confirmed {existing['meal_plan']} with "
+            f"${existing['dining_dollars']:,.0f} Dining Dollars "
+            f"on {format_time(existing['confirmed_at'])}."
+        ).classes("font-semibold")
+        ui.label(
+            f"Confirmation {existing['confirmation']}. Confirming again "
+            "below replaces this selection."
+        ).classes("text-sm text-gray-600")
+        ui.button(
+            "Cancel selection", icon="close", on_click=cancel
+        ).props("flat dense")
+
+
+def show_confirmation(record, confirmation_content):
+    confirmation_content.clear()
+
+    with confirmation_content:
+        with ui.card().classes("w-full p-6 rounded-xl shadow-sm gap-2"):
+            with ui.row().classes("items-center"):
+                ui.icon("check_circle", color="positive")
+                ui.label("Selection confirmed").classes("text-2xl font-bold")
+
+            ui.label(f"Confirmation: {record['confirmation']}").classes(
+                "font-semibold"
+            )
+            ui.label(f"Confirmed {format_time(record['confirmed_at'])}").classes(
+                "text-gray-600"
+            )
+            ui.label(
+                f"{record['meal_plan']} with "
+                f"${record['dining_dollars']:,.0f} Dining Dollars"
+            )
+            ui.label(f"Total sample cost: ${record['total']:,.2f}").classes(
+                "text-xl font-bold"
+            )
+            ui.label(
+                "This is a prototype. Nothing is billed or sent to UNH."
+            ).classes("text-sm text-gray-500")
+
+            ui.button(
+                "Back to Meal Plans",
+                icon="arrow_back",
+                on_click=lambda: ui.navigate.to("/meal-plans"),
+            ).classes("mt-2")
+
+
+async def confirm_meal_plan(application, button, stepper, confirmation_content):
     if not application["terms_accepted"]:
         ui.notify(
             "Please accept the meal plan terms.",
@@ -490,9 +599,26 @@ def confirm_meal_plan(application):
         )
         return
 
-    ui.notify(
-        "Your selections have been validated. "
-        "Submission is not connected to a backend yet.",
-        type="positive",
-        timeout=5000,
-    )
+    button.disable()  # prevent double submits while the request is in flight
+    try:
+        record = await meal_request(
+            "POST",
+            {
+                "meal_plan": application["meal_plan"]["name"],
+                "dining_dollars": application["dining_dollars"]["amount"],
+                "terms_accepted": application["terms_accepted"],
+            },
+        )
+    except APIError as error:
+        details = " ".join(error.errors.values())
+        ui.notify(
+            f"{error} {details}".strip(),
+            type="negative",
+            close_button=True,
+        )
+        return
+    finally:
+        button.enable()
+
+    show_confirmation(record, confirmation_content)
+    stepper.next()

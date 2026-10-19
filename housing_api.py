@@ -10,6 +10,7 @@ Endpoints:
     GET  /ra/cycle
     GET, PUT, DELETE /ra/application
     POST /ra/application/submit
+    GET, POST, DELETE /meal-plans/{year}/selection
 """
 
 import json
@@ -250,6 +251,12 @@ def database():
             status TEXT NOT NULL, version INTEGER NOT NULL,
             saved_at TEXT NOT NULL, submitted_at TEXT, confirmation TEXT
         )""")
+        connection.execute("""CREATE TABLE IF NOT EXISTS meal_plan_selections (
+            session TEXT NOT NULL, year TEXT NOT NULL, meal_plan TEXT NOT NULL,
+            dining_dollars INTEGER NOT NULL, total REAL NOT NULL,
+            confirmation TEXT NOT NULL, confirmed_at TEXT NOT NULL,
+            PRIMARY KEY (session, year)
+        )""")
         with connection:
             yield connection
     finally:
@@ -344,6 +351,95 @@ def reset_application(x_ra_session: str = Header()):
     with database() as db:
         db.execute("DELETE FROM ra_applications WHERE session=?", (key,))
     return empty_application()
+
+
+# ---------------------------------------------------------------------
+# Meal plans: server-side catalog (authoritative prices) and saved selections
+# ---------------------------------------------------------------------
+
+MEAL_PLAN_YEARS = {"2026-2027"}
+MEAL_PLAN_PRICES = {
+    "Unlimited": 3200.00,
+    "14 Meals Per Week": 2800.00,
+    "10 Meals Per Week": 2400.00,
+    "7 Meals Per Week": 2000.00,
+}
+DINING_DOLLAR_AMOUNTS = {0, 100, 250, 500}  # each dollar costs one dollar
+
+
+class MealPlanSelection(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    meal_plan: str = Field(max_length=60)
+    dining_dollars: int
+    terms_accepted: bool
+
+
+def meal_plan_record(row) -> dict | None:
+    if row is None:
+        return None
+    record = {key: row[key] for key in row.keys() if key != "session"}
+    record["meal_plan_price"] = MEAL_PLAN_PRICES.get(record["meal_plan"])
+    return record
+
+
+def check_meal_year(year: str):
+    if year not in MEAL_PLAN_YEARS:
+        raise HTTPException(404, "Meal plan selection is not available for that academic year.")
+
+
+def validate_meal_selection(selection: MealPlanSelection) -> dict[str, str]:
+    errors = {}
+    if not selection.terms_accepted:
+        errors["terms_accepted"] = "Agree to the meal plan terms before confirming."
+    if selection.meal_plan not in MEAL_PLAN_PRICES:
+        errors["meal_plan"] = "Choose one of the available meal plans."
+    if selection.dining_dollars not in DINING_DOLLAR_AMOUNTS:
+        errors["dining_dollars"] = "Choose one of the available Dining Dollar amounts."
+    return errors
+
+
+@app.get("/meal-plans/{year}/selection")
+def get_meal_selection(year: str, x_ra_session: str = Header()):
+    check_meal_year(year)
+    key = session_key(x_ra_session)
+    with database() as db:
+        return meal_plan_record(db.execute(
+            "SELECT * FROM meal_plan_selections WHERE session=? AND year=?", (key, year)).fetchone())
+
+
+@app.post("/meal-plans/{year}/selection")
+def confirm_meal_selection(year: str, request: MealPlanSelection, x_ra_session: str = Header()):
+    """Create or replace this session's selection. The total is computed here, not by the client."""
+    check_meal_year(year)
+    key = session_key(x_ra_session)
+    errors = validate_meal_selection(request)
+    if errors:
+        raise HTTPException(422, {"message": "Check your meal plan selection.", "errors": errors})
+    total = MEAL_PLAN_PRICES[request.meal_plan] + request.dining_dollars
+    now = datetime.now(timezone.utc).isoformat()
+    with database() as db:
+        db.execute("BEGIN IMMEDIATE")
+        existing = db.execute(
+            "SELECT confirmation FROM meal_plan_selections WHERE session=? AND year=?", (key, year)).fetchone()
+        confirmation = existing["confirmation"] if existing else "MP-DEMO-" + uuid4().hex[:8].upper()
+        db.execute("""INSERT INTO meal_plan_selections VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(session, year) DO UPDATE SET meal_plan=excluded.meal_plan,
+            dining_dollars=excluded.dining_dollars, total=excluded.total,
+            confirmed_at=excluded.confirmed_at""",
+                   (key, year, request.meal_plan, request.dining_dollars, total, confirmation, now))
+        return meal_plan_record(db.execute(
+            "SELECT * FROM meal_plan_selections WHERE session=? AND year=?", (key, year)).fetchone())
+
+
+@app.delete("/meal-plans/{year}/selection")
+def cancel_meal_selection(year: str, x_ra_session: str = Header()):
+    check_meal_year(year)
+    key = session_key(x_ra_session)
+    with database() as db:
+        deleted = db.execute(
+            "DELETE FROM meal_plan_selections WHERE session=? AND year=?", (key, year)).rowcount
+    return {"cancelled": bool(deleted)}
 
 
 if __name__ == "__main__":
