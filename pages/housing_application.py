@@ -36,22 +36,10 @@ ROOMMATE_PREFERENCES = [
 
 HOUSING_YEARS = [
     {
-        "year": "2026–2027",
-        "route": "/housing-applications/2026-2027",
+        "year": "2027-2028",
+        "route": "/housing-applications/2027-2028",
         "available": True,
-        "description": "Apply for campus housing for the 2026–2027 academic year.",
-    },
-    {
-        "year": "2025–2026",
-        "route": None,
-        "available": False,
-        "description": "Applications are closed.",
-    },
-    {
-        "year": "2027–2028",
-        "route": None,
-        "available": False,
-        "description": "Applications are not yet available.",
+        "description": "Apply for campus housing for the 2027–2028 academic year.",
     },
     {
         "year": "2028–2029",
@@ -110,13 +98,13 @@ def render_year_card(application: dict):
                     ui.navigate.to(route),
             ).classes("mt-4")
         else:
-            ui.button(
-                "Unavailable",
+            ui.button("Unavailable").props(
+                "disable"
             ).classes("mt-4")
 
 
-@ui.page("/housing-applications/2026-2027")
-async def housing_application_2026_page():
+@ui.page("/housing-applications/2027-2028")
+async def housing_application_2027_page():
     render_site_header()
 
     # Load any previously submitted application so the student can see and change it.

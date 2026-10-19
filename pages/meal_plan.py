@@ -26,13 +26,6 @@ DINING_HALLS = [
             "options for students."
         ),
     },
-    {
-        "name": "Stillings Dining Hall",
-        "description": (
-            "A residential dining location for everyday "
-            "campus dining."
-        ),
-    },
 ]
 
 MEAL_PLANS = [
@@ -99,22 +92,10 @@ DINING_DOLLAR_OPTIONS = [
 
 MEAL_PLAN_YEARS = [
     {
-        "year": "2026–2027",
-        "route": "/meal-plans/2026-2027",
-        "available": True,
-        "description": "Choose your meal plan for 2026–2027.",
-    },
-    {
-        "year": "2025–2026",
-        "route": None,
-        "available": False,
-        "description": "Meal plan selection is closed.",
-    },
-    {
         "year": "2027–2028",
-        "route": None,
-        "available": False,
-        "description": "Applications are not yet available.",
+        "route": "/meal-plans/2027-2028",
+        "available": True,
+        "description": "Choose your meal plan for 2027–2028.",
     },
     {
         "year": "2028–2029",
@@ -171,8 +152,8 @@ def meal_plans_page():
                             "disable"
                         ).classes("mt-4")
 
-@ui.page("/meal-plans/2026-2027")
-async def meal_plan_application_2026():
+@ui.page("/meal-plans/2027-2028")
+async def meal_plan_application_2027():
     render_site_header()
 
     application = {
@@ -278,7 +259,7 @@ async def meal_plan_application_2026():
                             )
 
                             ui.label(
-                                f"${plan['price']:,.2f} (sample price)"
+                                f"${plan['price']:,.2f}"
                             ).classes("text-lg")
 
                             ui.label(plan["swipes"]).classes(
@@ -570,7 +551,7 @@ def show_confirmation(record, confirmation_content):
                 f"{record['meal_plan']} with "
                 f"${record['dining_dollars']:,.0f} Dining Dollars"
             )
-            ui.label(f"Total sample cost: ${record['total']:,.2f}").classes(
+            ui.label(f"Total cost: ${record['total']:,.2f}").classes(
                 "text-xl font-bold"
             )
             ui.label(
