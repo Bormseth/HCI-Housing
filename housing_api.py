@@ -56,6 +56,45 @@ ANNOUNCEMENTS = [
     },
 ]
 
+
+class MaintenanceRequestCreate(BaseModel):
+    type: str
+    item: str
+    room: str
+    room_type: str
+    status: str = "Pending"
+    description: str
+
+MAINTENANCE_REQUESTS = [
+    {
+        "id": 1,
+        "type": "Public",
+        "item": "Chair",
+        "room": "Mills 100L",
+        "room_type": "Public Lounge",
+        "status": "Complete",
+        "description": "Chairs broken inside public lounge.",
+    },
+    {
+        "id": 2,
+        "type": "Public",
+        "item": "Whiteboard",
+        "room": "Mills 150",
+        "room_type": "Class Room",
+        "status": "Pending",
+        "description": "Whiteboard has major crack and peice missing.",
+    },
+        {
+        "id": 3,
+        "type": "Private",
+        "item": "Couch",
+        "room": "Mills 237 Common",
+        "room_type": "Suite Common",
+        "status": "Pending",
+        "description": "Couch cushion ripped.",
+    },
+]
+
 # ---------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------
@@ -127,6 +166,28 @@ def cancel_housing():
         raise HTTPException(status_code=400, detail="No housing selection to cancel")
     _selection = None
     return {"cancelled": True}
+
+@app.get("/maintenance-requests")
+def list_requests():
+    return MAINTENANCE_REQUESTS
+
+@app.post("/add-maintenance-request")
+def add_request(req: MaintenanceRequestCreate):
+    global MAINTENANCE_REQUESTS
+    new_id = (MAINTENANCE_REQUESTS[-1]["id"] + 1) if MAINTENANCE_REQUESTS else 1
+    
+    new_request = {
+        "id": new_id,
+        "type": req.type,
+        "item": req.item,
+        "room": req.room,
+        "room_type": req.room_type,
+        "status": req.status,
+        "description": req.description,
+    }
+    
+    MAINTENANCE_REQUESTS.append(new_request)
+    return {"success": True}
 
 # ---------------------------------------------------------------------
 # RA application: sample content, validation, and persistent drafts

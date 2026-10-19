@@ -11,6 +11,7 @@ if _LOGO_PATH.exists():
 NAV_LEFT_LINKS = [
     ("Home", "/"),
     ("Housing Applications", "/housing-applications"),
+    ("Maintenance", "/maintenance"),
     ("Meal Plans", "/meal-plans"),
     ("Become an RA", "/become-an-ra"),
 ]
