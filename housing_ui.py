@@ -2,7 +2,7 @@ import os
 
 from nicegui import ui
 
-from pages import housing_application, meal_plan, become_an_ra, housing_selection
+from pages import housing_application, maintenance, meal_plan, become_an_ra, housing_selection
 
 from components.header import render_site_header
 
