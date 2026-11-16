@@ -10,6 +10,7 @@ from components.housing_card import (
     render_housing_card,
 )
 from components.my_housing import render_no_housing_message
+from components.status import render_status_region, set_status
 from services.api_client import APIError, api_request
 
 
@@ -109,15 +110,19 @@ async def housing_application_2027_page():
 
     # Load any previously submitted application so the student can see and change it.
     existing = None
+    load_error = None
     try:
         existing = await housing_request("GET")
     except APIError as error:
-        ui.notify(str(error), type="negative", close_button=True)
+        load_error = str(error)
     saved = existing["data"] if existing else {}
 
     with ui.column().classes(
         "site-shell w-full max-w-4xl mx-auto p-6 gap-6"
     ):
+        status = render_status_region()
+        if load_error:
+            set_status(status, load_error, error=True)
         with ui.row().classes("items-center gap-2"):
             ui.button(
                 icon="arrow_back",
@@ -140,7 +145,7 @@ async def housing_application_2027_page():
         ).classes("text-gray-600")
 
         if existing:
-            existing_application_banner(existing)
+            existing_application_banner(existing, status)
 
         with ui.stepper().classes("w-full") as stepper:
             with ui.step("Student Information"):
@@ -304,6 +309,7 @@ async def housing_application_2027_page():
                             submit_button,
                             stepper,
                             confirmation_content,
+                            status,
                         ),
                     )
                     ui.button(
@@ -334,13 +340,13 @@ def format_time(value):
     )
 
 
-def existing_application_banner(existing):
+def existing_application_banner(existing, status):
     async def cancel():
         try:
             await housing_request("DELETE")
             ui.navigate.reload()
         except APIError as error:
-            ui.notify(str(error), type="negative", close_button=True)
+            set_status(status, str(error), error=True)
 
     with ui.card().classes("w-full p-4 rounded-xl shadow-sm"):
         ui.label(
@@ -405,17 +411,14 @@ def show_confirmation(record, confirmation_content):
                 ).props("flat")
 
 
-async def submit_application(payload, button, stepper, confirmation_content):
+async def submit_application(payload, button, stepper, confirmation_content, status):
     if not (
         payload["full_name"]
         and payload["email"]
         and payload["student_id"]
         and payload["class_year"]
     ):
-        ui.notify(
-            "Please complete all student information fields.",
-            type="warning",
-        )
+        set_status(status, "Please complete all student information fields.", error=True)
         return
 
     button.disable()  # prevent double submits while the request is in flight
@@ -423,14 +426,11 @@ async def submit_application(payload, button, stepper, confirmation_content):
         record = await housing_request("POST", payload)
     except APIError as error:
         details = " ".join(error.errors.values())
-        ui.notify(
-            f"{error} {details}".strip(),
-            type="negative",
-            close_button=True,
-        )
+        set_status(status, f"{error} {details}".strip(), error=True)
         return
     finally:
         button.enable()
 
     show_confirmation(record, confirmation_content)
+    set_status(status, "Housing application submitted.")
     stepper.next()

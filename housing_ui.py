@@ -44,7 +44,23 @@ def my_profile_page():
 
 @ui.page("/messages")
 def messages_page():
-    render_placeholder_page("Messages")
+    render_site_header()
+    with ui.column().classes("home-content w-full"):
+        with ui.card().classes("welcome-card w-full"):
+            ui.label("Messages").classes("welcome-title")
+            ui.label(
+                "Housing updates and support information are available here in text form."
+            ).classes("welcome-copy")
+            with ui.card().classes("w-full"):
+                ui.label("No new messages").classes("text-xl font-semibold")
+                ui.label(
+                    "Important housing, dining, and application updates will appear in this inbox."
+                ).classes("welcome-copy")
+            ui.separator()
+            ui.label("Need help?").classes("text-xl font-semibold")
+            ui.label(
+                "For accessibility-related support, send a text-based request through the Housing Portal or contact Housing and Residential Life using the university's published email service."
+            ).classes("welcome-copy")
 
 
 
