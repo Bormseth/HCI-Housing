@@ -2,9 +2,11 @@
 
 import asyncio
 import os
+from typing import Any
 
 import requests
 from nicegui import ui
+from components.status import set_status
 
 API_BASE = os.getenv("HOUSING_API_BASE", "http://127.0.0.1:8006").rstrip("/")
 
@@ -44,19 +46,25 @@ async def api_request(method: str, path: str, json=None, *, session: str | None 
     return await asyncio.to_thread(_request, method, path, json, session)
 
 
-def api_get(path: str):
+def api_get(path: str, status=None):
     """Preserve the original housing client's return value on failure."""
     try:
         return _request("GET", path)
     except APIError as error:
-        ui.notify(str(error), type="negative")
+        if status is not None:
+            set_status(status, str(error), error=True)
+        else:
+            ui.notify(str(error), type="negative")
         return []
 
 
-def api_post(path: str, json: dict = None):
+def api_post(path: str, json: dict[str, Any] | None = None, status=None):
     try:
         _request("POST", path, json)
         return True
     except APIError as error:
-        ui.notify(str(error), type="negative")
+        if status is not None:
+            set_status(status, str(error), error=True)
+        else:
+            ui.notify(str(error), type="negative")
         return False
