@@ -25,7 +25,10 @@ def render_current_housing_card(housing: dict):
         ui.label(
             f'{housing["building_name"]} - {housing["style"].capitalize()} {format_room_type(housing["room_type"])}'
             ).classes("font-bold")
-        with ui.link(target="/housing-applications/room-select"): ui.button("Change")
+        ui.button(
+            "Change",
+            on_click=lambda: ui.navigate.to("/housing-applications/room-select"),
+        )
 
 def format_room_type(slug: str) -> str:
     """'super_single' -> 'Super Single', '2_doubles_1_single' -> '2 Doubles + 1 Single'"""
@@ -39,5 +42,13 @@ def render_building_card(building):
         with ui.row():
             ui.label(text=building["name"])
         with ui.row():
-            with ui.link(target=building["url"], new_tab=True): ui.button("More Info")
-            with ui.link(target=f"/housing-applications/room-select/{building['id']}"): ui.button("Choose Room")
+            ui.button(
+                "More Info",
+                on_click=lambda url=building["url"]: ui.navigate.to(url, new_tab=True),
+            )
+            ui.button(
+                "Choose Room",
+                on_click=lambda building_id=building["id"]: ui.navigate.to(
+                    f"/housing-applications/room-select/{building_id}"
+                ),
+            )
